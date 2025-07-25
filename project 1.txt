@@ -1,0 +1,113 @@
+STEP 1: Drop all tables in correct dependency order
+DROP TABLE IF EXISTS Expenses;
+DROP TABLE IF EXISTS Income;
+DROP TABLE IF EXISTS Categories;
+DROP TABLE IF EXISTS Users;
+
+ STEP 2: Create Schema
+
+-- Users Table
+CREATE TABLE Users (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100),
+    email VARCHAR(100)
+);
+
+-- Categories Table
+CREATE TABLE Categories (
+    category_id INT PRIMARY KEY AUTO_INCREMENT,
+    category_name VARCHAR(100)
+);
+
+-- Income Table
+CREATE TABLE Income (
+    income_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    amount DECIMAL(10,2),
+    source VARCHAR(100),
+    income_date DATE,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id)
+);
+
+-- Expenses Table
+CREATE TABLE Expenses (
+    expense_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    amount DECIMAL(10,2),
+    category_id INT,
+    description VARCHAR(255),
+    expense_date DATE,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id),
+    FOREIGN KEY (category_id) REFERENCES Categories(category_id)
+);
+
+-- 🟢 STEP 3: Insert Dummy Data
+
+-- Users
+INSERT INTO Users (name, email) VALUES 
+('Ankita Dubey', 'ankita03022003@gmail.com'),
+('Ravi Sharma', 'ravi@gmail.com');
+
+-- Categories
+INSERT INTO Categories (category_name) VALUES 
+('Food'), ('Rent'), ('Travel'), ('Shopping'), ('Utilities');
+
+-- Income
+INSERT INTO Income (user_id, amount, source, income_date) VALUES
+(1, 25000.00, 'Job', '2025-07-01'),
+(1, 1500.00, 'Freelance', '2025-07-10'),
+(2, 30000.00, 'Job', '2025-07-02');
+
+-- Expenses
+INSERT INTO Expenses (user_id, amount, category_id, description, expense_date) VALUES
+(1, 1200.00, 1, 'Groceries', '2025-07-03'),
+(1, 7000.00, 2, 'Monthly Rent', '2025-07-05'),
+(1, 150.00, 3, 'Bus Fare', '2025-07-06'),
+(1, 2000.00, 4, 'New Clothes', '2025-07-07'),
+(1, 500.00, 5, 'Electricity Bill', '2025-07-08'),
+(2, 3000.00, 1, 'Dinner with family', '2025-07-10');
+
+-- 🟢 STEP 4: Queries
+
+-- 1️⃣ Monthly Expense Summary (for user_id = 1)
+SELECT 
+    MONTH(expense_date) AS month,
+    SUM(amount) AS total_expense
+FROM Expenses
+WHERE user_id = 1
+GROUP BY MONTH(expense_date);
+
+-- 2️⃣ Category-wise Spending (for user_id = 1)
+SELECT 
+    C.category_name,
+    SUM(E.amount) AS total_spent
+FROM Expenses E
+JOIN Categories C ON E.category_id = C.category_id
+WHERE E.user_id = 1
+GROUP BY C.category_name;
+
+-- 🟢 STEP 5: Create View for Balance Tracking
+CREATE OR REPLACE VIEW UserBalance AS
+SELECT 
+    U.user_id,
+    U.name,
+    IFNULL(SUM(I.amount), 0) - IFNULL(SUM(E.amount), 0) AS balance
+FROM Users U
+LEFT JOIN Income I ON U.user_id = I.user_id
+LEFT JOIN Expenses E ON U.user_id = E.user_id
+GROUP BY U.user_id;
+
+-- 3️⃣ View current balance for all users
+SELECT * FROM UserBalance;
+
+-- 🟢 STEP 6: Export Report Query (run manually, then export from Workbench)
+-- Example: July report for user_id = 1
+SELECT 
+    E.expense_date,
+    C.category_name,
+    E.description,
+    E.amount
+FROM Expenses E
+JOIN Categories C ON E.category_id = C.category_id
+WHERE E.user_id = 1 AND MONTH(E.expense_date) = 7;
+
